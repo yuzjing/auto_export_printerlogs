@@ -14,7 +14,7 @@ import pandas as pd
 import glob 
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import TimeoutException
 
 
 # 脚本设计为每月1号运行，自动获取上个月数据
@@ -31,12 +31,12 @@ USERNAME = '11111'
 PASSWORD = 'x-admin'
 IP_ADDRESS = '192.168.14.250'
 AUTH_LOGIN_URL = f"http://{IP_ADDRESS}"
-CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome Dev\Application\chrome.exe"
+CHROME_BINARY_PATH = "/usr/sbin/google-chrome-unstable"
 HOME_DIR = os.path.expanduser('~')
 # 主存档目录，所有运行的原始数据都会存放在这里
-ARCHIVE_DIR = r'D:\PrinterReportsArchive' 
+ARCHIVE_DIR = os.path.join(HOME_DIR, 'PrinterReportsArchive/floor4')
 # 最终合并报告的存放目录
-FINAL_REPORT_DIR = r'D:\PrinterReportsFinal'
+FINAL_REPORT_DIR = os.path.join(HOME_DIR, 'PrinterReportsArchive/floor4')
 
 # 根据当前运行日期，创建一个本次任务专属的子文件夹
 run_date_str = today.strftime('%Y-%m-%d')
@@ -60,11 +60,14 @@ else:
     print(f"目录 {DOWNLOAD_DIR} 不存在，无需清理")
 
 
-# --- 2. 初始化浏览器 (保持不变) ---
+# --- 2. 初始化浏览器  ---
 options = Options()
-options.add_argument('--ignore-certificate-errors')
-options.add_argument('--allow-insecure-localhost')
 options.binary_location = CHROME_BINARY_PATH
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-dev-shm-usage')
+options.add_argument('--ignore-certificate-errors')
+options.add_argument('--ignore-ssl-errors')
+# options.add_argument('--headless')
 prefs = {'download.default_directory': DOWNLOAD_DIR}
 options.add_experimental_option('prefs', prefs)
 
@@ -277,18 +280,18 @@ try:
                 export_button.click()
                 print("已点击导出链接。")
 
-                time.sleep(2)
+                
 
                
 
                 # -- 判断结果 --
-                time.sleep(3)
+                time.sleep(1)
                 error_locator = "//*[contains(text(), 'Unable to export') or contains(text(), 'There was no') or contains(text(), 'Unable to enter Administrator Mode') or contains(text(), 'A job is in progress')]"
                 try:
                     
                     
                    # 尝试寻找任何一种已知的业务反馈信息
-                    error_element = driver.find_element(By.XPATH, error_locator)
+                    error_element = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, error_locator)))
                     error_text = error_element.text
                     
                     # 如果能执行到这里，说明页面上【一定】有某种错误信息
@@ -316,7 +319,7 @@ try:
                         break
 
                 
-                except NoSuchElementException:
+                except TimeoutException:
                     print(f"[成功] 日期 {current_date_str} 导出成功，开始处理文件...")
                     # 1. 定义文件名和超时时间
                     default_filename = "jobhist.csv"
@@ -394,11 +397,20 @@ try:
             try:
                 # 尝试用 'gbk' 解码，因为很多中文Windows导出的CSV是这个格式
                 df = pd.read_csv(file, encoding='gbk')
+                # 提取文件名中的日期（如 jobhist_2025-03-01.csv → 2025-03-01）
+                filename = os.path.basename(file)
+                date_str = filename.replace('jobhist_', '').replace('.csv', '')
+                # 补充日期列
+                df['日期'] = date_str
                 df_list.append(df)
             except UnicodeDecodeError:
                 try:
                     # 如果 gbk 失败，再尝试 'utf-8'
                     df = pd.read_csv(file, encoding='utf-8')
+                    filename = os.path.basename(file)
+                    date_str = filename.replace('jobhist_', '').replace('.csv', '')
+                    # 补充日期列
+                    df['日期'] = date_str
                     df_list.append(df)
                 except Exception as e:
                     print(f"!! 错误: 读取文件 {file} 失败: {e}")
@@ -458,4 +470,4 @@ except Exception as e:
     # 3. 使用 input() 暂停程序，等待你来排查
     print("\n【程序已暂停】浏览器保持在出错页面，请进行排查。")
     print("排查完毕后，请在此终端窗口按 Enter 键以结束程序。")
-    input("----------------------------------------------------")
+    # input("----------------------------------------------------")

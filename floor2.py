@@ -1,12 +1,12 @@
 import time
 import os
 import shutil
-from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from datetime import date, datetime
 import calendar
 from dateutil.relativedelta import relativedelta
@@ -29,12 +29,12 @@ USERNAME = '11111'
 PASSWORD = 'x-admin'
 IP_ADDRESS = '192.168.12.250'
 AUTH_LOGIN_URL = f"http://{USERNAME}:{PASSWORD}@{IP_ADDRESS}"
-CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome Dev\Application\chrome.exe"
+CHROME_BINARY_PATH = "/usr/sbin/google-chrome-unstable"
 HOME_DIR = os.path.expanduser('~')
 # 主存档目录，所有运行的原始数据都会存放在这里
-ARCHIVE_DIR = r'D:\PrinterReportsArchive' 
+ARCHIVE_DIR = os.path.join(HOME_DIR, 'PrinterReportsArchive/floor2')
 # 最终合并报告的存放目录
-FINAL_REPORT_DIR = r'D:\PrinterReportsFinal'
+FINAL_REPORT_DIR = os.path.join(HOME_DIR, 'PrinterReportsArchive/floor2')
 
 # 根据当前运行日期，创建一个本次任务专属的子文件夹
 run_date_str = today.strftime('%Y-%m-%d')
@@ -61,6 +61,11 @@ else:
 # --- 2. 初始化浏览器 (保持不变) ---
 options = Options()
 options.binary_location = CHROME_BINARY_PATH
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-dev-shm-usage')
+options.add_argument('--ignore-certificate-errors')
+options.add_argument('--ignore-ssl-errors')
+# options.add_argument('--headless')
 prefs = {'download.default_directory': DOWNLOAD_DIR}
 options.add_experimental_option('prefs', prefs)
 
@@ -217,7 +222,7 @@ try:
 
                 # -- 判断结果 --
                 time.sleep(3)
-                error_locator = "//*[contains(text(), 'Unable to export') or contains(text(), 'There is no job') or contains(text(), 'Unable to enter Administrator Mode')]"
+                error_locator = "//*[contains(text(), 'Unable to export') or contains(text(), 'There is no job') or contains(text(), 'Your request was not')]"
                 try:
                     # 尝试寻找失败标志
                     error_element = driver.find_element(By.XPATH, error_locator)
@@ -238,7 +243,7 @@ try:
                         print(f"   [最终反馈] 日期 {current_date_str} 当日无数据。")
                         is_final_feedback = True
                     
-                    elif "Administrator Mode" in error_text:
+                    elif "Your request was not" in error_text:
                         print(f"!! [瞬时错误] 打印机正忙 (尝试 {attempt + 1}/{RETRY_COUNT})。")
                         # 瞬时错误不需要设置 is_final_feedback，因为它要重试
                     
@@ -253,11 +258,15 @@ try:
                     else:
                         # 否则（就是瞬时错误），我们就抛出异常以触发重试
                         raise Exception("Printer is busy or unknown error, will retry...")
-                except:
+                except NoSuchElementException:
                     print(f"[成功] 日期 {current_date_str} 导出成功，开始处理文件...")
                     # 1. 定义文件名和超时时间
                     default_filename = "jobhist.csv"
                     original_filepath = os.path.join(DOWNLOAD_DIR, default_filename)
+                    # 添加调试信息
+                    #print(f"期望的文件路径: {original_filepath}")
+                    #print(f"当前工作目录: {os.getcwd()}")
+                    #print(f"下载目录内容: {os.listdir(DOWNLOAD_DIR) if os.path.exists(DOWNLOAD_DIR) else '目录不存在'}")
                     download_wait_time = 120 # 最长等待120秒
                     time_elapsed = 0
 
@@ -303,7 +312,7 @@ try:
                     print(f"   将在 {RETRY_DELAY} 秒后重试...")
                     time.sleep(RETRY_DELAY)
                     # 刷新页面，回到一个干净的状态，准备重试
-                    driver.refresh() 
+                    # driver.refresh() 
         else:
             # 这个 else 块属于 for 循环，只有在 for 循环正常结束（即 break 没有被执行）时才会运行
             # 在我们的场景里，如果成功了就会 break，所以这里可以留空或用于记录未曾成功 break 的情况
@@ -395,4 +404,4 @@ except Exception as e:
     # 3. 使用 input() 暂停程序，等待你来排查
     print("\n【程序已暂停】浏览器保持在出错页面，请进行排查。")
     print("排查完毕后，请在此终端窗口按 Enter 键以结束程序。")
-    input("----------------------------------------------------")
+   #  input("----------------------------------------------------")
