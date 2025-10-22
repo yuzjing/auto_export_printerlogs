@@ -36,7 +36,7 @@ HOME_DIR = os.path.expanduser('~')
 # 主存档目录，所有运行的原始数据都会存放在这里
 ARCHIVE_DIR = os.path.join(HOME_DIR, 'PrinterReportsArchive/floor4')
 # 最终合并报告的存放目录
-FINAL_REPORT_DIR = os.path.join(HOME_DIR, 'PrinterReportsArchive/floor4')
+FINAL_REPORT_DIR = os.path.join(HOME_DIR, 'PrinterReportsFinal/floor4')
 
 # 根据当前运行日期，创建一个本次任务专属的子文件夹
 run_date_str = today.strftime('%Y-%m-%d')
