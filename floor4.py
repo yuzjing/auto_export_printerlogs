@@ -15,6 +15,7 @@ import glob
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import TimeoutException
+from data_processor import process_and_insert_data
 
 
 # 脚本设计为每月1号运行，自动获取上个月数据
@@ -67,7 +68,7 @@ options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
 options.add_argument('--ignore-certificate-errors')
 options.add_argument('--ignore-ssl-errors')
-# options.add_argument('--headless')
+options.add_argument('--headless')
 prefs = {'download.default_directory': DOWNLOAD_DIR}
 options.add_experimental_option('prefs', prefs)
 
@@ -377,97 +378,32 @@ try:
             
     # --- 所有循环都成功后 ---
     print(f"\n[任务完成] {EXPORT_YEAR}年{EXPORT_MONTH}月的所有数据已处理完毕！")
-    driver.quit()
-
-    print("\n--- [阶段二开始] 正在合并所有下载的 CSV 文件... ---")
-    
-    # 1. 找到本次运行下载的所有 CSV 文件
-    csv_files = glob.glob(os.path.join(run_archive_dir, "*.csv"))
-
-    csv_files.sort()
-    
-    if not csv_files:
-        print("!! 警告: 在存档目录中未找到任何 CSV 文件，跳过合并步骤。")
-    else:
-        print(f"找到 {len(csv_files)} 个每日 CSV 文件，准备合并...")
-        
-        # 2. 逐个读取文件，并存放到一个列表中
-        df_list = []
-        for file in csv_files:
-            try:
-                # 尝试用 'gbk' 解码，因为很多中文Windows导出的CSV是这个格式
-                df = pd.read_csv(file, encoding='gbk')
-                # 提取文件名中的日期（如 jobhist_2025-03-01.csv → 2025-03-01）
-                filename = os.path.basename(file)
-                date_str = filename.replace('jobhist_', '').replace('.csv', '')
-                # 补充日期列
-                df['日期'] = date_str
-                df_list.append(df)
-            except UnicodeDecodeError:
-                try:
-                    # 如果 gbk 失败，再尝试 'utf-8'
-                    df = pd.read_csv(file, encoding='utf-8')
-                    filename = os.path.basename(file)
-                    date_str = filename.replace('jobhist_', '').replace('.csv', '')
-                    # 补充日期列
-                    df['日期'] = date_str
-                    df_list.append(df)
-                except Exception as e:
-                    print(f"!! 错误: 读取文件 {file} 失败: {e}")
-
-        # 3. 如果列表不为空，就合并所有 DataFrame
-        if df_list:
-            # 使用 concat 一次性合并所有文件
-            merged_df = pd.concat(df_list, ignore_index=True)
-
-            if '日期' in merged_df.columns and '结束时间' in merged_df.columns:
-                print("正在按 '日期' 和 '结束时间' 对数据进行排序...")
-        
-                # **方案A
-                # 直接按两个字符串列进行排序
-                merged_df.sort_values(by=['日期', '结束时间'], inplace=True)
-
-                # **方案B
-                # # 1. 将 '日期' 和 '结束时间' 合并成一个真正的时间戳列
-                # merged_df['完整时间'] = pd.to_datetime(merged_df['日期'] + ' ' + merged_df['结束时间'])
-                # # 2. 按这个新列排序
-                # merged_df.sort_values(by='完整时间', inplace=True)
-                # # 3. (可选) 删除临时的辅助列
-                # merged_df.drop(columns=['完整时间'], inplace=True)
-
-                print("数据排序完成！")
-            else:
-                print("!! 警告: 找不到 '日期' 或 '结束时间' 列，跳过排序步骤。")
-            
-            # 4. 定义最终合并文件的名称和路径
-            final_filename = f"Monthly_Report_{EXPORT_YEAR}-{EXPORT_MONTH:02d}.csv"
-            final_filepath = os.path.join(FINAL_REPORT_DIR, final_filename)
-            
-            # 5. 保存合并后的文件
-            # 使用 'utf-8-sig' 编码可以确保 Excel 正确打开包含中文的 CSV 文件
-            merged_df.to_csv(final_filepath, index=False, encoding='utf-8-sig')
-            
-            print(f"\n[成功] 所有 CSV 文件已合并！")
-            print(f"最终报表已保存至: {final_filepath}")
-            print(f"共包含 {len(merged_df)} 条记录。")
-
-
-
-except Exception as e:
-    # --- 只要上面 try 块中任何一步出错了，程序就会立刻跳到这里 ---
-    
-    print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    print("【脚本执行失败】")
-    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    
-    # 1. 打印清晰的错误信息
-    print(f"错误类型: {type(e).__name__}")
-    # 打印具体的错误日志，这里包含了非常有用的信息
-    print(f"错误详情:\n{e}")
-
    
 
-    # 3. 使用 input() 暂停程序，等待你来排查
-    print("\n【程序已暂停】浏览器保持在出错页面，请进行排查。")
-    print("排查完毕后，请在此终端窗口按 Enter 键以结束程序。")
-    # input("----------------------------------------------------")
+    download_successful = True # 如果程序能顺利跑到这里，说明下载成功
+    
+except Exception as e:
+    print(f"!!!!!! [阶段一 失败] 在浏览器自动化过程中发生严重错误: {e} !!!!!!")
+    # 异常发生，download_successful 依然是 False
+
+finally:
+    if driver:
+        driver.quit()
+        print("浏览器已关闭。")
+
+# --- [阶段二] 开始: 处理数据并写入数据库 ---
+# 只有在第一阶段成功完成后，才执行第二阶段
+
+
+if download_successful:
+    print("\n--- [阶段二 开始] 处理已下载文件并写入数据库 ---")
+    try:
+        # 直接调用处理函数，传入刚刚保存文件的目录和打印机类型
+        process_and_insert_data(directory_path=run_archive_dir, printer_type='floor4')
+    except Exception as e:
+        print(f"!!!!!! [阶段二 失败] 在数据处理或数据库插入过程中发生错误: {e} !!!!!!")
+else:
+    print("\n[任务中止] 由于阶段一（文件下载）未成功，阶段二（数据处理）被跳过。")
+
+print("\n--- [任务总流程结束] ---")
+    
