@@ -1,4 +1,4 @@
-# database_utils.py (最终版)
+# database_utils.py
 
 import pymysql.cursors
 from db_config import DB_CONFIG, TABLE_NAME

@@ -1,12 +1,10 @@
-# data_processor.py (严格按照您的要求，在您的基准代码上只增加 floor4 日期修复)
-
-import os
+# data_processor.py 
 import pandas as pd
 import numpy as np
 
 from database_utils import create_connection, create_table_if_not_exists, insert_log_data
 
-# --- 配置区域 (与您的基准代码完全一致) ---
+# --- 配置区域 ---
 FINAL_DB_COLUMNS = [
     'log_date', 'end_time', 'user', 'output_location', 'job_info', 
     'page_info', 'pages', 'sheets', 'job_status', 'job_level', 'job_id'
@@ -43,7 +41,7 @@ PRINTER_COLUMN_MAPS = {
 }
 
 def process_and_insert_data(directory_path, printer_type):
-    # 函数前半部分和文件查找逻辑与您的基准代码完全一致
+  
     print(f"\n--- [数据处理模块] 开始处理 '{printer_type}' 的数据，来源: {directory_path} ---")
     if printer_type not in PRINTER_COLUMN_MAPS:
         print(f"!! 严重错误: 未知的打印机类型 '{printer_type}'。")
@@ -65,11 +63,11 @@ def process_and_insert_data(directory_path, printer_type):
     
     for csv_file in csv_files_full_path:
         df = None
-        # 编码检测部分与您的基准代码完全一致
+        
         potential_encodings = ['utf-8', 'gb18030', 'gbk', 'cp932', 'shift_jis']
         for encoding in potential_encodings:
             try:
-                # 使用您基准代码中的 read_csv，不加 engine 参数
+               
                 temp_df = pd.read_csv(csv_file, encoding=encoding)
                 if not temp_df.empty and expected_header_sample in temp_df.columns:
                     df = temp_df
@@ -86,9 +84,6 @@ def process_and_insert_data(directory_path, printer_type):
             df_processed = df[FINAL_DB_COLUMNS]
             df_processed.dropna(how='all', inplace=True)
 
-            # --- 【【【唯一的核心修改：在这里增加针对 floor4 的特殊处理】】】 ---
-            
-            # 1. 检查当前处理的是否是 floor4
             if printer_type == 'floor4':
                 # 从文件名提取日期
                 basename = os.path.basename(csv_file)
@@ -97,19 +92,19 @@ def process_and_insert_data(directory_path, printer_type):
                 df_processed['log_date'] = date_from_filename
                 print(f"   -> [floor4 特殊处理] 已从文件名 '{basename}' 强制填充日期: {date_from_filename}")
 
-            # 2. 强制解析日期列（对floor2生效，对floor4是二次确认）
+            # 2. 强制解析日期列
             df_processed['log_date'] = pd.to_datetime(df_processed['log_date'], errors='coerce')
             
-            # 3. 清洗数值列 'pages' 和 'sheets' (与您的基准代码完全一致)
+            # 3. 清洗数值列 'pages' 和 'sheets'
             df_processed['pages'] = pd.to_numeric(df_processed['pages'], errors='coerce').fillna(0).astype(int)
             df_processed['sheets'] = pd.to_numeric(df_processed['sheets'], errors='coerce').fillna(0).astype(int)
             
-            # --- 【【【修改结束】】】 ---
+           
 
-            # 4. 对所有列，将 pandas 的缺失值转换成数据库能识别的 None (与您的基准代码完全一致)
+            # 4. 对所有列，将 pandas 的缺失值转换成数据库能识别的 None 
             df_processed = df_processed.astype(object).where(pd.notnull(df_processed), None)
             
-            # 准备最终插入的数据元组列表 (与您的基准代码完全一致)
+            # 准备最终插入的数据元组列表 
             data_tuples = [(printer_type,) + row for row in df_processed.itertuples(index=False)]
             
             all_data_to_insert.extend(data_tuples)
@@ -117,7 +112,7 @@ def process_and_insert_data(directory_path, printer_type):
         except Exception as e:
             print(f"!! 处理文件 {os.path.basename(csv_file)} 时发生未知错误: {e}")
 
-    # 函数后半部分的数据库连接和插入逻辑与您的基准代码完全一致
+   
     print(f"\n文件解析完成。共找到 {len(all_data_to_insert)} 条有效记录。")
     
     if all_data_to_insert:
