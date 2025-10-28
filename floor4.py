@@ -118,14 +118,12 @@ try:
 
     print("登录成功，正在等待页面加载蒙版消失...")
     
-    # 我们用 XPath 来定位这个作为“拦路虎”的蒙版
-    # 它的 class 包含 'xux-modal'，并且它是一个 div
+    
     loading_overlay_locator = (By.XPATH, "//div[contains(@class, 'xux-modal')]")
     
     long_wait = WebDriverWait(driver, 30)
     
-    # 等待这个元素变为“不可见”。
-    # 如果蒙版一开始就不存在，这个等待会立刻成功，非常安全。
+    
     long_wait.until(EC.invisibility_of_element_located(loading_overlay_locator))
     print("加载蒙版已消失！页面已准备好交互。")
     hamberger_button_locator = "//button[@title='Toggle Navigation']"
@@ -177,10 +175,10 @@ try:
                         wait.until(EC.invisibility_of_element_located(cancel_button_locator))
                         print("模态框已关闭。")
                 except:
-                    # 如果找不到 "Cancel" 按钮，说明模态框本来就是关着的，很好
+                    
                     print("页面状态正常，模态框已关闭。")
                 
-                # --- 现在，我们处于一个已知的、干净的起点，开始标准流程 ---
+                
                 
                 # 2. 点击 'Export Job History' 按钮，打开模态框
                 print("正在打开导出设置模态框...")
@@ -208,7 +206,7 @@ try:
                 ActionChains(driver).click(start_hour_visible_input).perform()
                 time.sleep(0.3)
                 driver.execute_script("arguments[0].value = '';", start_hour_visible_input)
-                # 步骤 C: 【关键】加入一个极短的延迟，等待 JS 响应
+                # 加入一个极短的延迟，等待 JS 响应
                 time.sleep(0.2)
     
                 ActionChains(driver)\
@@ -219,7 +217,7 @@ try:
                 ActionChains(driver).click(start_minute_visible_input).perform()
                 time.sleep(0.3)
                 driver.execute_script("arguments[0].value = '';", start_minute_visible_input)
-                # 步骤 C: 【关键】加入一个极短的延迟，等待 JS 响应
+                # 加入一个极短的延迟，等待 JS 响应
                 time.sleep(0.2)
                 ActionChains(driver)\
                     .send_keys("00")\
@@ -257,7 +255,7 @@ try:
                     .send_keys("23")\
                     .perform()
 
-                # **分钟** (重复相同的稳健逻辑)
+                
                 ActionChains(driver).click(end_minute_visible_input).perform()
                 time.sleep(0.3)
                 driver.execute_script("arguments[0].value = '';", end_minute_visible_input)
@@ -295,7 +293,7 @@ try:
                     error_element = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, error_locator)))
                     error_text = error_element.text
                     
-                    # 如果能执行到这里，说明页面上【一定】有某种错误信息
+                    
                     
                     # 1. 判断是否为“瞬时错误”
                     if "A job is in progress" in error_text:
@@ -355,7 +353,7 @@ try:
 
                     print(f"文件处理完毕: jobhist_{current_date_str}.csv")
                     
-                    # 【关键】既然成功了，就用 break 跳出重试循环
+                    
                     break
 
             except Exception as day_error:
@@ -372,8 +370,7 @@ try:
                     # 刷新页面，回到一个干净的状态，准备重试
                     driver.refresh() 
         else:
-            # 这个 else 块属于 for 循环，只有在 for 循环正常结束（即 break 没有被执行）时才会运行
-            # 在我们的场景里，如果成功了就会 break，所以这里可以留空或用于记录未曾成功 break 的情况
+           
             pass
             
     # --- 所有循环都成功后 ---

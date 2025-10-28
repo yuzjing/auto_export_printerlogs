@@ -25,7 +25,7 @@ EXPORT_MONTH = previous_month_date.month
 RETRY_COUNT = 5 # 设置每天的最大重试次数
 RETRY_DELAY = 10 # 设置每次重试的间隔时间（秒）
 
-# --- 1. 配置信息 (保持不变) ---
+# --- 1. 配置信息 ---
 USERNAME = '11111'
 PASSWORD = 'x-admin'
 IP_ADDRESS = '192.168.12.250'
@@ -59,7 +59,7 @@ else:
     print(f"目录 {DOWNLOAD_DIR} 不存在，无需清理")
 
 
-# --- 2. 初始化浏览器 (保持不变) ---
+# --- 2. 初始化浏览器 ---
 options = Options()
 options.binary_location = CHROME_BINARY_PATH
 options.add_argument('--no-sandbox')
@@ -90,7 +90,7 @@ try:
     # --- 步骤 2: 处理 JavaScript 警告框 ---
     print("等待并处理安全警告框...")
     try:
-        # 我们把处理警告框也放在一个小的 try-except 里，这样即使不弹框也不会报错
+        
         alert1 = wait.until(EC.alert_is_present())
         alert1.accept()
         print("第一个警告框已处理。")
@@ -118,14 +118,12 @@ try:
     print("已成功点击 'Properties'。")
 
 
-    # **步骤 A: 先从当前框架（TF）切回顶层**
-    # 这是关键的第一步，让 Selenium 的焦点回到页面的最外层
+    
     print("正在从 'TF' 框架切换回顶层...")
     driver.switch_to.default_content()
     print("已切换回顶层。WebDriver 正在重新评估页面结构...")
     
-    # **步骤 B: 现在，在新结构下，等待并切换到 'NF' 框架**
-    # 因为我们已经回到了顶层，Selenium 现在应该能“看”到 JS 画出来的新框架了
+   
     print("正在智能等待并切换到新出现的 'NF' 框架...")
     wait.until(EC.frame_to_be_available_and_switch_to_it("NF"))
     print("成功切换到 'NF' 框架！")
@@ -146,7 +144,7 @@ try:
     print("已成功点击 'Job Management'。")
 
     # --- 点击 'Export Job History' 链接 ---
-    # 这是我们最终的目标页面
+   
     print("正在点击 'Export Job History' 链接...")
     export_history_locator = "//a[contains(@href, \"dclick('jobItms',1)\")]"
     export_history_link = wait.until(EC.element_to_be_clickable((By.XPATH, export_history_locator)))
@@ -156,7 +154,7 @@ try:
     driver.switch_to.default_content()
 
     # --- 步骤 7: 在最终页面上进行操作 ---
-    # 现在您已经到达了“Export Job History”页面，可以开始填写日期、点击查询了
+    
     print("正在填写日期...")
     dateform_frame_name = "RF"
     print("正在从 'NF' 框架切换到 'RF' 框架...")
@@ -176,7 +174,7 @@ try:
         month_str = f"{EXPORT_MONTH:02d}"
         current_date_str = f"{EXPORT_YEAR}-{month_str}-{day_str}"
         
-        # 【【【新增：重试循环】】】
+        
         for attempt in range(RETRY_COUNT):
             try:
                 print(f"\n--- [尝试 {attempt + 1}/{RETRY_COUNT}] 开始处理日期: {current_date_str} ---")
@@ -214,7 +212,7 @@ try:
                 end_miniute_input = driver.find_element(By.NAME, 'MIN2')
                 end_miniute_input.clear()
                 end_miniute_input.send_keys("59")
-                # ... (填写开始和结束日期的代码) ...
+                
                 print("日期已填写。")
 
                 # -- 点击导出 --
@@ -231,8 +229,7 @@ try:
                     error_text = error_element.text
                     
                     
-                    # 如果能找到，我们就判断一下是哪种错误
-                    # 定义一个标志位，用于判断是否需要 break
+                    
                     is_final_feedback = False
                     
                     # --- 开始判断错误类型 ---
@@ -249,23 +246,23 @@ try:
                         print(f"!! [瞬时错误] 打印机正忙 (尝试 {attempt + 1}/{RETRY_COUNT})。")
                         # 瞬时错误不需要设置 is_final_feedback，因为它要重试
                     
-                    # 无论哪种业务反馈，我们都需要点击 "Back" 按钮
+                    
                     driver.find_element(By.XPATH, "//input[@value='Back']").click()
                     
                     # --- 根据错误类型，决定下一步行动 ---
                     
                     if is_final_feedback:
-                        # 如果是“最终反馈”，我们就 break 跳出重试循环
+                        
                         break
                     else:
-                        # 否则（就是瞬时错误），我们就抛出异常以触发重试
+                        
                         raise Exception("Printer is busy or unknown error, will retry...")
                 except NoSuchElementException:
                     print(f"[成功] 日期 {current_date_str} 导出成功，开始处理文件...")
                     # 1. 定义文件名和超时时间
                     default_filename = "jobhist.csv"
                     original_filepath = os.path.join(DOWNLOAD_DIR, default_filename)
-                    # 添加调试信息
+                    # 调试信息
                     #print(f"期望的文件路径: {original_filepath}")
                     #print(f"当前工作目录: {os.getcwd()}")
                     #print(f"下载目录内容: {os.listdir(DOWNLOAD_DIR) if os.path.exists(DOWNLOAD_DIR) else '目录不存在'}")
@@ -299,14 +296,14 @@ try:
 
                     print(f"文件处理完毕: jobhist_{current_date_str}.csv")
                     
-                    # 【关键】既然成功了，就用 break 跳出重试循环
+                    
                     break
 
             except Exception as day_error:
                 print(f"!! [错误] 处理 {current_date_str} 时发生错误 (尝试 {attempt + 1}/{RETRY_COUNT})")
                 print(f"   错误详情: {day_error}")
                 
-                # 如果这是最后一次尝试，记录最终失败
+                
                 if attempt == RETRY_COUNT - 1:
                     print(f"!!!!!! [最终失败] 日期 {current_date_str} 在重试 {RETRY_COUNT} 次后彻底失败，将跳过此天。 !!!!!!")
                 else:
@@ -316,8 +313,7 @@ try:
                     # 刷新页面，回到一个干净的状态，准备重试
                     # driver.refresh() 
         else:
-            # 这个 else 块属于 for 循环，只有在 for 循环正常结束（即 break 没有被执行）时才会运行
-            # 在我们的场景里，如果成功了就会 break，所以这里可以留空或用于记录未曾成功 break 的情况
+           
             pass
             
     # --- 所有循环都成功后 ---
