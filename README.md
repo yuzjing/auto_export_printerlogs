@@ -27,8 +27,8 @@
 ├── data_processor.py      # 核心数据处理模块，负责读取CSV、清洗数据并写入数据库
 ├── database_utils.py      # 数据库工具模块，封装了数据库连接、建表、插入等操作
 ├── db_config.py           # 数据库连接配置文件
-├── floor2.py              # 2楼打印机的自动化主脚本（入口程序）
-├── floor4.py              # 4楼打印机的自动化主脚本（入口程序）
+├── floor2.py              # 打印机一的自动化主脚本（入口程序）
+├── floor4.py              # 打印机二的自动化主脚本（入口程序）
 ├── README.md              # 项目说明文件
 └── requirements.txt       # Python 依赖库列表
 ```
