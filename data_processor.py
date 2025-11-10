@@ -1,6 +1,7 @@
 # data_processor.py 
 import pandas as pd
 import numpy as np
+import os
 
 from database_utils import create_connection, create_table_if_not_exists, insert_log_data
 
