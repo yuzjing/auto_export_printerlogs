@@ -59,24 +59,7 @@ numpy
 
 
 
-## 自动化调度 (使用 Cron)
+## 自动化调度 (使用systemd.timer)
 
-通过设置一个 `cron` 定时任务，让脚本在每个月1号的凌晨自动运行。
-
-1.  打开 cron 编辑器：
-    ```bash
-    crontab -e
-    ```
-
-2.  在文件末尾添加以下两行（请确保使用**绝对路径**）：
-
-    ```crontab
-    # 在每个月1号的凌晨2:00，运行floor2的脚本
-    0 2 1 * * /usr/bin/python /path/to/your/project/floor2.py >> /path/to/your/project/cron.log 2>&1
-
-    # 在每个月1号的凌晨2:05，运行floor4的脚本
-    5 2 1 * * /usr/bin/python /path/to/your/project/floor4.py >> /path/to/your/project/cron.log 2>&1
-    ```
-    - `0 2 1 * *` 表示“每月1日的2点0分”。
-    - `>> ... 2>&1` 会将所有的输出和错误信息追加到 `cron.log` 文件中，方便排查问题。
-
+藉由systemd.timer强大的功能实现：每月的1，2，3号的 12：30   12：45   13：00   13：15各运行一次。
+参见[floor2_exporter.timer](floor2_exporter.timer)

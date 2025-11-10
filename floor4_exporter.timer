@@ -1,0 +1,14 @@
+ cat /etc/systemd/system/floor4_exporter.timer
+[Unit]
+Description=Run Printer Exporter for Floor 4 on 1st, 2nd, 3rd of every month (with offset)
+
+[Timer]
+OnCalendar=*-*-01,02,03 12:31:00
+OnCalendar=*-*-01,02,03 12:46:00
+OnCalendar=*-*-01,02,03 13:01:00
+OnCalendar=*-*-01,02,03 13:16:00
+
+Persistent=true
+
+[Install]
+WantedBy=timers.target

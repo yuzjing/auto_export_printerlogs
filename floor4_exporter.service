@@ -1,0 +1,11 @@
+[Unit]
+Description=Printer Exporter for Floor 4
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/printer_exporter
+ExecStart=/opt/printer_exporter/venv/bin/python3 /opt/printer_exporter/floor4.py
+
+[Install]
+WantedBy=multi-user.target
